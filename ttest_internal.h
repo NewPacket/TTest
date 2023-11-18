@@ -11,9 +11,6 @@
 #define _TDEBUGGER_BREAK()() 
 #endif
 
-//
-// hide case tests to tests namespace
-
 namespace ttest::internal {
 
 	inline constexpr bool report_all_results = _T_IS_DEFINED(ttest_REPORT_ALL);
