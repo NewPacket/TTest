@@ -35,6 +35,8 @@
 
 namespace ttest
 {
+	class test_case;
+
 	using t_u8 = unsigned char;
 	using t_i32 = int;
 	using t_u32 = unsigned int;
@@ -46,11 +48,18 @@ namespace ttest
 		ABORT = 2,
 	};
 
-	struct test_check_failed_info
+	struct test_check_info
 	{
-		const char* failed_check = nullptr;
+		const char* check_text = nullptr;
 		const char* check_message = nullptr;
 		t_i32 check_line = 0;
+	};
+
+	struct test_suite_results
+	{
+		const test_case* cases;
+		t_u32 cases_count;
+		t_u32 cases_failed;
 	};
 
 
@@ -61,9 +70,14 @@ namespace ttest
 // Any func with same signature will work for custom printer
 // int print(char* buffer, int max_size)
 #define TPRINT_FUNC(format, ...) \
-int print(char* buffer, int max_size) { return sprintf_s(buffer, max_size, format, __VA_ARGS__); }
+int print(char* buffer, int max_size) { return snprintf(buffer, max_size, format, __VA_ARGS__); }
 
 #include "ttest_internal.h"
+
+#define TTEST_GET_CASES(suite_name) ttest::suits::test_##suite_name::run::get_cases();
+#define TTEST_REPORT_ALL(suite_name) ttest::suits::test_##suite_name::run::report_all();
+#define TTEST_REPORT_FAILS(suite_name) ttest::suits::test_##suite_name::run::report_all();
+#define TTEST_REPORT_LEVEL(suite_name, report_level) ttest::suits::test_##suite_name::run::report_all();
 
 #define TDECLARE_TEST_SUITE(x) TDECLARE_TEST_SUITE_INTERNAL(x) 
 #define TDECLARE_CASE_IN_SUITE(x,y) TDECLARE_CASE_IN_SUITE_INTERNAL(x,y)
@@ -196,3 +210,277 @@ int print(char* buffer, int max_size) { return sprintf_s(buffer, max_size, forma
 //	 + no static sprintf_s buffers for all checks or template on needed size, but will still waste memory and code is uglier
 // 
 // - libfmt instead of printf and sprintf
+
+// Examples of usage
+
+//#include <stdio.h>
+//#define TTEST_SHOW_ALL_CHECKS_RESULTS 0
+//#define TTEST_NO_BREAKS 0
+//#include "ttest.h"
+//
+//#define DEFINES_TESTS defines
+//#define TEST_SUITE_NAME DEFINES_TESTS
+//TDECLARE_TEST_SUITE(TEST_SUITE_NAME)
+//#define ADD_TEST_CASE(x) TDECLARE_CASE_IN_SUITE(x, TEST_SUITE_NAME)
+//
+//int GetSelf(int x)
+//{
+//	return x;
+//}
+//
+//ADD_TEST_CASE(Basic_calls)
+//{
+//	TWARN(true);
+//	TASSERT(true);
+//}
+//
+//ADD_TEST_CASE(Basic_calls_with_messages)
+//{
+//	int x = 2;
+//	int y = 2;
+//	TWARN_MESSAGE(x == y, "warn message")
+//		TASSERT_MESSAGE(true, "assert message")
+//}
+//
+//ADD_TEST_CASE(Calls_with_operation)
+//{
+//	int x = 1;
+//	int y = 2;
+//	TWARN_EQ(GetSelf(x) == 1, GetSelf(y) == 2, % d, % d);
+//	TASSERT_EQ(2, 2, % d, % d);
+//}
+//
+//ADD_TEST_CASE(Calls_with_operation_FORMAT_CUSTOM_format)
+//{
+//	int x = 1;
+//	int y = 2;
+//	TWARN_EQ_FORMAT(GetSelf(x) == 1, GetSelf(y) == 1, "GetSelf() %d %d"); // SHOULD WARN
+//	TASSERT_EQ_FORMAT(GetSelf(2), GetSelf(2), "%d %d");
+//}
+//
+//#undef TEST_SUITE_NAME
+//#undef ADD_TEST_CASE
+//
+//#define TEST_SUITE_NAME class_tests
+//TDECLARE_TEST_SUITE(TEST_SUITE_NAME)
+//#define ADD_TEST_CASE(x) TDECLARE_CASE_IN_SUITE(x, TEST_SUITE_NAME)
+//
+//class TestClassA
+//{
+//public:
+//
+//	explicit TestClassA() = default;
+//
+//	explicit TestClassA(int int_v, float float_v) :
+//		int_var(int_v),
+//		float_var(float_v)
+//	{};
+//
+//	int GetInt() const { return int_var; };
+//	float GetFloat() const { return float_var; };
+//
+//protected:
+//
+//	int int_var = 0;
+//	float float_var = 0.f;
+//};
+//
+//class TestClassB
+//{
+//public:
+//
+//	explicit TestClassB() = default;
+//
+//	explicit TestClassB(bool bool_v, char char_v) :
+//		bool_var(bool_v),
+//		char_var(char_v)
+//	{};
+//
+//	bool GetBool() const { return bool_var; };
+//	char GetChar() const { return char_var; };
+//
+//protected:
+//
+//	bool bool_var = false;
+//	char char_var = 0;
+//};
+//
+//template<>
+//class ttest::TestAdapter<TestClassA> : TestClassA
+//{
+//public:
+//
+//	using TestClassA::TestClassA;
+//	using TestClassA::int_var;
+//	using TestClassA::float_var;
+//
+//	TPRINT_FUNC("Class a: \n\tint_var: %d\n\tfloat_var: %f\n", int_var, float_var)
+//};
+//
+//template<>
+//class ttest::TestAdapter<TestClassB> : TestClassB
+//{
+//public:
+//
+//	using TestClassB::TestClassB;
+//	using TestClassB::bool_var;
+//	using TestClassB::char_var;
+//
+//	int print(char* buffer, int max_size)
+//	{
+//		return sprintf_s(buffer, max_size, "Class b: \n\tbool_var: %d\n\tchar_var: %c\n", bool_var, char_var);
+//	};
+//};
+//
+//
+//ADD_TEST_CASE(TestClassA_tests)
+//{
+//	TestAdapter<TestClassA> a{ 1, 3.0 };
+//	TASSERT_EQ(a.int_var, 1, % d, % d);
+//	TASSERT_EQ_FORMAT_CUSTOM(a.float_var, 3.1, "%f %f\n", a.print)  // SHOULD ABORT
+//}
+//
+//ADD_TEST_CASE(TestClassB_test)
+//{
+//	TestAdapter<TestClassB> b{ true, 3 };
+//	TASSERT_EQ(b.bool_var, true, % d, % d);
+//	TASSERT_EQ_FORMAT_CUSTOM(b.bool_var, (bool)1, "%d %d\n", b.print)
+//
+//}
+//
+//ADD_TEST_CASE(A_and_B_tests)
+//{
+//	TestAdapter<TestClassA> class_a{ 1, 3.0 };
+//	int a_int = class_a.int_var;
+//
+//	TestAdapter<TestClassB> class_b{ true, 3 };
+//	bool b_bool = class_b.bool_var;
+//
+//	TASSERT_EQ_FORMAT_CUSTOM_BOTH((bool)class_a.int_var, class_b.bool_var, "%d %d\n", class_a.print, class_b.print)
+//
+//}
+//
+//#undef TEST_SUITE_NAME
+//#undef ADD_TEST_CASE
+//
+//
+//#define TEST_SUITE_NAME class_operators
+//TDECLARE_TEST_SUITE(TEST_SUITE_NAME)
+//#define ADD_TEST_CASE(x) TDECLARE_CASE_IN_SUITE(x, TEST_SUITE_NAME)
+//
+//class TestClassC
+//{
+//public:
+//
+//	explicit TestClassC() = default;
+//	explicit TestClassC(TestClassC& other) = default;
+//
+//	explicit TestClassC(int int_v_1, int int_v_2, float float_v) :
+//		int_var_1(int_v_1),
+//		int_var_2(int_v_2),
+//		float_var(float_v)
+//	{};
+//
+//	int GetIntFirst() const { return int_var_1; };
+//	int GetIntSecond() const { return int_var_2; };
+//	float GetFloat() const { return float_var; };
+//
+//	bool operator!=(TestClassC& other)
+//	{
+//		return int_var_1 != other.int_var_1 || int_var_2 != other.int_var_2 || float_var != other.float_var;
+//	}
+//
+//	bool operator==(TestClassC& other)
+//	{
+//		return !(*this != other);
+//	}
+//
+//	bool operator>(TestClassC& other)
+//	{
+//		return int_var_1 > other.int_var_1 && int_var_2 > other.int_var_2 && float_var > other.float_var;
+//	}
+//
+//	bool operator>=(TestClassC& other)
+//	{
+//		return !(*this < other);
+//	}
+//
+//	bool operator<(TestClassC& other)
+//	{
+//		return int_var_1 < other.int_var_1&& int_var_2 < other.int_var_2&& float_var < other.float_var;
+//	}
+//
+//	bool operator<=(TestClassC& other)
+//	{
+//		return !(*this > other);
+//	}
+//
+//protected:
+//
+//	int int_var_1 = 0;
+//	int int_var_2 = 0;
+//	float float_var = 0.f;
+//
+//};
+//
+//template<>
+//class ttest::TestAdapter<TestClassC> : public TestClassC
+//{
+//public:
+//
+//	using TestClassC::TestClassC;
+//	using TestClassC::int_var_1;
+//	using TestClassC::int_var_2;
+//	using TestClassC::float_var;
+//
+//	TPRINT_FUNC("Class C:\n\tint_var_1: %d\n\tint_var_2: %d\n\tfloat_var: %f\n", int_var_1, int_var_2, float_var)
+//};
+//using Test_TestClassC = ttest::TestAdapter<TestClassC>;
+//
+//ADD_TEST_CASE(creation_test)
+//{
+//	Test_TestClassC a{ 1, 2, 3.0f };
+//	Test_TestClassC b{ 2, 3, 3.0f };
+//	TASSERT_NEQ_CUSTOM_BOTH(a, b, a.print, b.print);
+//}
+//
+//ADD_TEST_CASE(comparisons_with_literals_test)
+//{
+//	Test_TestClassC a{ 2, 2, 3.0f };
+//	Test_TestClassC b{ 2, 2, 3.0f };
+//	TASSERT_NEQ(a.int_var_1, 1, % d, % d);
+//	TASSERT_EQ_CUSTOM_BOTH(a, b, a.print, b.print);
+//}
+//
+//ADD_TEST_CASE(comparisons_test)
+//{
+//	Test_TestClassC a{ 1, 2, 3.0f };
+//	Test_TestClassC b{ 2, 3, 4.0f };
+//	Test_TestClassC c{ 2, 4, 4.0f };
+//	Test_TestClassC d{ 1, 3, 3.0f };
+//
+//	TWARN_EQ_CUSTOM_BOTH(a, b, a.print, b.print); // SHOULD WARN
+//	TWARN_NEQ_CUSTOM_BOTH(a, b, a.print, b.print);
+//	TWARN_LEQ_CUSTOM_BOTH(a, b, a.print, b.print);
+//	TWARN_GEQ_CUSTOM_BOTH(d, c, a.print, b.print); // SHOULD WARN
+//	TWARN_GR_CUSTOM_BOTH(a, b, a.print, b.print); // SHOULD WARN
+//	TWARN_LE_CUSTOM_BOTH(a, c, a.print, b.print);
+//}
+//
+//ADD_TEST_CASE(custom_print_with_format)
+//{
+//	Test_TestClassC a{ 1, 2, 3.0f };
+//	Test_TestClassC b{ 2, 3, 4.0f };
+//	TASSERT_NEQ_FORMAT_CUSTOM_BOTH(a.int_var_1, b.int_var_2, "a: %d, b: %d", a.print, b.print);
+//}
+//
+//#undef TEST_SUITE_NAME
+//#undef ADD_TEST_CASE
+//
+//int main()
+//{
+//	int cases_failed_defines = TTEST_REPORT_ALL(defines);
+//	int cases_failed_class = TTEST_REPORT_ALL(class_tests);
+//	int cases_failed_class_operators = TTEST_REPORT_ALL(class_operators);
+//	return TTEST_REPORT_LEVEL(defines, ttest::test_case_result::ABORT);
+//}
