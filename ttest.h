@@ -76,8 +76,8 @@ int print(char* buffer, int max_size) { return snprintf(buffer, max_size, format
 
 #define TTEST_GET_CASES(suite_name) ttest::suits::test_##suite_name::run::get_cases();
 #define TTEST_REPORT_ALL(suite_name) ttest::suits::test_##suite_name::run::report_all();
-#define TTEST_REPORT_FAILS(suite_name) ttest::suits::test_##suite_name::run::report_all();
-#define TTEST_REPORT_LEVEL(suite_name, report_level) ttest::suits::test_##suite_name::run::report_all();
+#define TTEST_REPORT_FAILS(suite_name) ttest::suits::test_##suite_name::run::report_fails();
+#define TTEST_REPORT_LEVEL(suite_name, level_to_report) ttest::suits::test_##suite_name::run::report_level(level_to_report);
 
 #define TDECLARE_TEST_SUITE(x) TDECLARE_TEST_SUITE_INTERNAL(x) 
 #define TDECLARE_CASE_IN_SUITE(x,y) TDECLARE_CASE_IN_SUITE_INTERNAL(x,y)
@@ -212,10 +212,10 @@ int print(char* buffer, int max_size) { return snprintf(buffer, max_size, format
 // - libfmt instead of printf and sprintf
 
 // Examples of usage
-
+// 
 //#include <stdio.h>
 //#define TTEST_SHOW_ALL_CHECKS_RESULTS 0
-//#define TTEST_NO_BREAKS 0
+//#define TTEST_NO_BREAKS 1
 //#include "ttest.h"
 //
 //#define DEFINES_TESTS defines
@@ -477,10 +477,29 @@ int print(char* buffer, int max_size) { return snprintf(buffer, max_size, format
 //#undef TEST_SUITE_NAME
 //#undef ADD_TEST_CASE
 //
-//int main()
+//#define TEST_SUITE_NAME tests_run
+//TDECLARE_TEST_SUITE(TEST_SUITE_NAME)
+//#define ADD_TEST_CASE(x) TDECLARE_CASE_IN_SUITE(x, TEST_SUITE_NAME)
+//
+//ADD_TEST_CASE(all_suits)
 //{
 //	int cases_failed_defines = TTEST_REPORT_ALL(defines);
+//	TASSERT(cases_failed_defines == 1);
+//
 //	int cases_failed_class = TTEST_REPORT_ALL(class_tests);
+//	TASSERT(cases_failed_class == 1);
+//
 //	int cases_failed_class_operators = TTEST_REPORT_ALL(class_operators);
-//	return TTEST_REPORT_LEVEL(defines, ttest::test_case_result::ABORT);
+//	TASSERT(cases_failed_class_operators == 1);
+//
+//	int aborted_cases_count = TTEST_REPORT_LEVEL(defines, ttest::test_case_result::ABORT);
+//	TASSERT(cases_failed_defines == 1);
+//}
+//
+//#undef TEST_SUITE_NAME
+//#undef ADD_TEST_CASE
+//
+//int main()
+//{
+//	return TTEST_REPORT_ALL(tests_run);
 //}
